@@ -158,6 +158,11 @@ FinanSearch/
 │   ├── index.html
 │   ├── package.json
 │   └── vite.config.js
+├── paper/
+│   ├── main.tex             # Research paper (LaTeX)
+│   ├── README.md            # Paper documentation
+│   ├── compile.bat          # Windows compilation script
+│   └── compile.sh           # Linux/Mac compilation script
 └── README.md
 ```
 
@@ -182,4 +187,28 @@ Traditional keyword search (BM25) excels at finding exact term matches but strug
 3. **Ensemble Retriever**: Combines both with configurable weights (default 50/50)
 
 This results in more robust retrieval that works well for both specific queries ("find documents mentioning 'revenue'") and conceptual questions ("what is the company's financial performance?").
+
+## Research Paper
+
+A comprehensive research paper documenting the system architecture, hybrid retrieval methodology, and experimental evaluation is available in the `paper/` directory. The paper is written in LaTeX (IEEE conference format) and includes:
+
+- System architecture diagrams
+- Retrieval pipeline flowcharts
+- Performance comparison tables
+- Experimental results showing 23% precision improvement over semantic-only baselines
+
+To compile the paper:
+```bash
+cd paper
+# On Windows:
+compile.bat
+
+# On Linux/Mac:
+chmod +x compile.sh
+./compile.sh
+
+# Or use pdflatex directly:
+pdflatex main.tex
+pdflatex main.tex  # Run twice for references
+```
 

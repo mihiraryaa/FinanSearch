@@ -1,6 +1,10 @@
-langchain 
-langchain-openai 
-langchain-community 
+langchain
+langchain-openai
+langchain-community
 faiss-cpu
-unstructured 
+unstructured
 pypdf
+fastapi
+uvicorn[standard]
+python-multipart
+rank-bm25

@@ -417,7 +417,7 @@
 
 .doc-source {
   font-weight: 600;
-  color: #667eea;
+  color: #2c3e50;
   font-size: 0.8rem;
 }
 
@@ -457,12 +457,12 @@
 
 .input-form input:focus {
   outline: none;
-  border-color: #667eea;
+  border-color: #2c3e50;
 }
 
 .input-form button {
   padding: 0.9rem 2rem;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #2c3e50 0%, #1a1a1a 100%);
   color: white;
   border: none;
   border-radius: 25px;
@@ -474,7 +474,7 @@
 
 .input-form button:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
 }
 
 .input-form button:disabled {
@@ -493,12 +493,12 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #2c3e50 0%, #1a1a1a 100%);
   border-radius: 10px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+  background: linear-gradient(135deg, #1a1a1a 0%, #2c3e50 100%);
 }
 
 @media (max-width: 1200px) {

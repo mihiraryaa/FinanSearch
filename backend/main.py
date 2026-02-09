@@ -8,7 +8,6 @@ from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain_community.document_loaders import DirectoryLoader
 from langchain_community.vectorstores import FAISS
 from langchain_community.retrievers import BM25Retriever
-from langchain.retrievers import EnsembleRetriever
 from langchain_text_splitters import CharacterTextSplitter
 from dotenv import load_dotenv
 from langchain_core.prompts import ChatPromptTemplate
@@ -118,6 +117,43 @@ def setup_vector_store():
     bm25_retriever.k = config["retrieval_k"]
 
 
+def hybrid_search(query: str, k: int):
+    """
+    Custom hybrid search combining semantic and keyword search.
+    Uses 60% semantic weight and 40% keyword weight.
+    """
+    global vectorstore, bm25_retriever
+
+    # Get results from both retrievers
+    bm25_retriever.k = k * 2  # Get more results to ensure good coverage
+    semantic_retriever = vectorstore.as_retriever(search_kwargs={"k": k * 2})
+
+    semantic_docs = semantic_retriever.invoke(query)
+    keyword_docs = bm25_retriever.invoke(query)
+
+    # Score documents using Reciprocal Rank Fusion with weights
+    doc_scores = {}
+
+    # Semantic results with 60% weight
+    for rank, doc in enumerate(semantic_docs):
+        doc_id = doc.page_content  # Use content as unique identifier
+        score = 0.6 * (1.0 / (rank + 1))  # RRF score with semantic weight
+        doc_scores[doc_id] = {"score": score, "doc": doc}
+
+    # Keyword results with 40% weight
+    for rank, doc in enumerate(keyword_docs):
+        doc_id = doc.page_content
+        score = 0.4 * (1.0 / (rank + 1))  # RRF score with keyword weight
+        if doc_id in doc_scores:
+            doc_scores[doc_id]["score"] += score  # Add to existing score
+        else:
+            doc_scores[doc_id] = {"score": score, "doc": doc}
+
+    # Sort by combined score and return top k
+    sorted_docs = sorted(doc_scores.values(), key=lambda x: x["score"], reverse=True)
+    return [item["doc"] for item in sorted_docs[:k]]
+
+
 def get_retriever():
     global vectorstore, bm25_retriever
 
@@ -127,19 +163,8 @@ def get_retriever():
         bm25_retriever.k = config["retrieval_k"]
         return bm25_retriever
     elif config["search_mode"] == "hybrid":
-        if vectorstore is None or bm25_retriever is None:
-            raise HTTPException(status_code=500, detail="Retrievers not initialized")
-
-        # Set up both retrievers with the same k value
-        bm25_retriever.k = config["retrieval_k"]
-        semantic_retriever = vectorstore.as_retriever(search_kwargs={"k": config["retrieval_k"]})
-
-        # Create ensemble retriever with 60% semantic, 40% keyword
-        ensemble_retriever = EnsembleRetriever(
-            retrievers=[semantic_retriever, bm25_retriever],
-            weights=[0.6, 0.4]
-        )
-        return ensemble_retriever
+        # Return None for hybrid, we'll handle it separately in the query endpoint
+        return None
     else:  # semantic
         return vectorstore.as_retriever(search_kwargs={"k": config["retrieval_k"]})
 
@@ -204,12 +229,31 @@ async def update_config(config_update: ConfigUpdate):
 
 @app.post("/query", response_model=QueryResponse)
 async def query(request: QueryRequest):
-    if rag_chain is None:
-        raise HTTPException(status_code=500, detail="RAG not initialized")
+    # Handle hybrid search separately
+    if config["search_mode"] == "hybrid":
+        if vectorstore is None or bm25_retriever is None:
+            raise HTTPException(status_code=500, detail="Retrievers not initialized")
 
-    retriever = get_retriever()
-    retrieved_docs = retriever.invoke(request.question)
-    answer = rag_chain.invoke(request.question)
+        # Get hybrid search results
+        retrieved_docs = hybrid_search(request.question, config["retrieval_k"])
+
+        # Create context from retrieved docs
+        context = "\n\n".join([doc.page_content for doc in retrieved_docs])
+
+        # Generate answer using LLM with context
+        llm = ChatOpenAI(
+            model=config["llm_model"],
+            temperature=config["temperature"]
+        )
+        prompt = ChatPromptTemplate.from_template(config["prompt_template"])
+        chain = prompt | llm | StrOutputParser()
+        answer = chain.invoke({"context": context, "question": request.question})
+    else:
+        if rag_chain is None:
+            raise HTTPException(status_code=500, detail="RAG not initialized")
+        retriever = get_retriever()
+        retrieved_docs = retriever.invoke(request.question)
+        answer = rag_chain.invoke(request.question)
 
     formatted = []
     for i, doc in enumerate(retrieved_docs[:config["retrieval_k"]]):

@@ -8,6 +8,7 @@ from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain_community.document_loaders import DirectoryLoader
 from langchain_community.vectorstores import FAISS
 from langchain_community.retrievers import BM25Retriever
+from langchain.retrievers import EnsembleRetriever
 from langchain_text_splitters import CharacterTextSplitter
 from dotenv import load_dotenv
 from langchain_core.prompts import ChatPromptTemplate
@@ -36,7 +37,7 @@ config = {
     "separator": "\n\n",
     "temperature": 0.7,
     "retrieval_k": 4,
-    "search_mode": "semantic",  # semantic or keyword
+    "search_mode": "hybrid",  # hybrid, semantic, or keyword
     "prompt_template": """You are an assistant for question-answering tasks.
 Use the following pieces of retrieved context to answer the question.
 If you don't know the answer, make something up.
@@ -125,7 +126,21 @@ def get_retriever():
             raise HTTPException(status_code=500, detail="BM25 not initialized")
         bm25_retriever.k = config["retrieval_k"]
         return bm25_retriever
-    else:
+    elif config["search_mode"] == "hybrid":
+        if vectorstore is None or bm25_retriever is None:
+            raise HTTPException(status_code=500, detail="Retrievers not initialized")
+
+        # Set up both retrievers with the same k value
+        bm25_retriever.k = config["retrieval_k"]
+        semantic_retriever = vectorstore.as_retriever(search_kwargs={"k": config["retrieval_k"]})
+
+        # Create ensemble retriever with 60% semantic, 40% keyword
+        ensemble_retriever = EnsembleRetriever(
+            retrievers=[semantic_retriever, bm25_retriever],
+            weights=[0.6, 0.4]
+        )
+        return ensemble_retriever
+    else:  # semantic
         return vectorstore.as_retriever(search_kwargs={"k": config["retrieval_k"]})
 
 

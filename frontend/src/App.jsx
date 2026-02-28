@@ -2,8 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import axios from 'axios'
 import './App.css'
 
-const API_BASE = '/api'
-
+const API_BASE = import.meta.env.VITE_API_URL || '/api'
 function App() {
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
@@ -135,7 +134,8 @@ function App() {
   return (
     <div className="app">
       <header className="header">
-        <h1>FinanSearch - RAG Chatbot</h1>
+        <h1>FinanSearch: A Hybrid RAG System for Financial Document Search
+</h1>
         <div className="header-buttons">
           <button onClick={() => setShowUpload(!showUpload)} className="header-btn">
             {showUpload ? 'Hide Upload' : 'Upload Docs'}

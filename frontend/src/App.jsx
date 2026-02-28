@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import axios from 'axios'
 import './App.css'
 
-const API_BASE = import.meta.env.VITE_API_URL || '/api'
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 function App() {
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
